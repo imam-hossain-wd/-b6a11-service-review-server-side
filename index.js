@@ -19,6 +19,15 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 
 try{
   const serviceCollection = client.db("serviceReview").collection("services");
+  const bookingCollection = client.db('serviceReview').collection('booking');
+
+//jwt token
+app.post('/jwt', (req, res) =>{
+  const user = req.body;
+  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d'})
+  res.send({token})
+}) 
+
 
   app.get('/services', async (req, res) => {
     const query = {}
@@ -33,6 +42,14 @@ try{
         res.send(service);
     });
 });
+
+     //booking
+     app.post('/booking', async(req , res)=>{
+      const booking = req.body;
+      const result = await bookingCollection.insertOne(booking);
+      res.send(result);
+
+     })
 
     }
     finally{
