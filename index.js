@@ -11,6 +11,22 @@ app.use(cors());
 app.use(express.json());
 
 
+const verifyJWT = (req, res, next) =>{
+ const authHeader = req.headers.authorization;
+ if(!authHeader){
+  res.status(401).send({message: 'unauthorized access'})
+ }
+ const token = authHeader.split(' ')[1];
+
+ jwt.verify(token , process.env.ACCESS_TOKEN_SECRET, function(err , decoded){
+  if(err){
+    res.status(403).send({message: 'Forbidden access'})
+  }
+  req.decoded = decoded;
+  next()
+ })
+}
+
 const run = async()=>{
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.ijfbjuv.mongodb.net/?retryWrites=true&w=majority`;
@@ -45,9 +61,15 @@ app.post('/jwt', (req, res) =>{
 
      //booking api 
 
-    app.get('/bookings', async(req , res)=>{
-      let query = {};
+    app.get('/bookings', verifyJWT, async(req , res)=>{
+      
+      const decoded = req.decoded;
+      console.log('inside booking api', decoded);
+      if(decoded.email !== req.query.email){
+        res.status(403).send({message: 'unauthorized access'})
+      }
 
+      let query = {};
       if(req.query.email){
         query= {
           email: req.query.email 
@@ -96,7 +118,7 @@ app.post('/jwt', (req, res) =>{
 
 }
 run()
-// .catch(err => console.error(err));
+.catch(err => console.error(err));
 
 app.get('/', (req, res) => {
   res.send('Hello World!!!')
