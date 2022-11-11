@@ -14,7 +14,6 @@ app.use(express.json());
 const run = async()=>{
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASSWORD}@cluster0.ijfbjuv.mongodb.net/?retryWrites=true&w=majority`;
-console.log(uri);
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
 
 try{
@@ -22,16 +21,16 @@ try{
   const bookingCollection = client.db('serviceReview').collection('booking');
 
 //jwt token
-app.post('/jwt', (req, res) =>{
-  const user = req.body;
-  const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d'})
-  res.send({token})
-}) 
+// app.post('/jwt', (req, res) =>{
+//   const user = req.body;
+//   const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1d'})
+//   res.send({token})
+// }) 
 
 
   app.get('/services', async (req, res) => {
     const query = {}
-    const cursor = serviceCollection.find(query);
+    const cursor = serviceCollection.find(query).limit(3);
     const services = await cursor.toArray();
     res.send(services);
 
@@ -43,13 +42,51 @@ app.post('/jwt', (req, res) =>{
     });
 });
 
-     //booking
+     //booking api 
+
+    app.get('/bookings', async(req , res)=>{
+      let query = {};
+
+      if(req.query.email){
+        query= {
+          email: req.query.email 
+        }
+      }
+      const cursor = bookingCollection.find(query);
+      const bookings = await cursor.toArray();
+      res.send(bookings)
+    })
+
      app.post('/booking', async(req , res)=>{
       const booking = req.body;
       const result = await bookingCollection.insertOne(booking);
       res.send(result);
 
      })
+
+     //update 
+     app.patch('/booking/:id', async (req, res) => {
+      const id = req.params.id;
+      const status = req.body.status
+      const query = { _id: ObjectId(id) }
+      const updatedDoc = {
+          $set:{
+              status: status
+          }
+      }
+      const result = await bookingCollection.updateOne(query, updatedDoc);
+      res.send(result);
+  })
+
+
+    // delete 
+    delete
+     app.delete('/booking/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await bookingCollection.deleteOne(query);
+      res.send(result);
+  })
 
     }
     finally{
