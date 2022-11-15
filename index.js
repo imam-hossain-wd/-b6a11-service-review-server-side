@@ -14,13 +14,13 @@ app.use(express.json());
 const verifyJWT = (req, res, next) =>{
  const authHeader = req.headers.authorization;
  if(!authHeader){
-  res.status(401).send({message: 'unauthorized access'})
+ return  res.status(401).send({message: 'unauthorized access'})
  }
  const token = authHeader.split(' ')[1];
 
  jwt.verify(token , process.env.ACCESS_TOKEN_SECRET, function(err , decoded){
   if(err){
-    res.status(403).send({message: 'Forbidden access'})
+  return res.status(403).send({message: 'Forbidden access'})
   }
   req.decoded = decoded;
   next()
@@ -35,6 +35,7 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 try{
   const serviceCollection = client.db("serviceReview").collection("services");
   const bookingCollection = client.db('serviceReview').collection('booking');
+  const userCollection = client.db('serviceReview').collection('users');
 
 // jwt token
 app.post('/jwt', (req, res) =>{
@@ -44,14 +45,83 @@ app.post('/jwt', (req, res) =>{
   console.log(user);
 }) 
 
+//post user
+app.post('/users' , async (req, res)=>{
+  const user = req.body;
+  const result = await userCollection.insertOne(user);
+  res.send(result)
+})
 
-  app.get('/services', async (req, res) => {
+//get user
+
+app.get('/users', async (req, res) => {
+  let query = {};
+  if(req.query.email){
+    query = {
+      email: req.query.email
+    }
+  }
+  const cursor = userCollection.find(query);
+  const user = await cursor.toArray();
+  res.send(user)
+})
+
+//update user
+
+app.get('/users/:id' , async (req, res)=>{
+  const id = req.params.id;
+  const query = { _id: ObjectId(id) };
+  const user = await userCollection.findOne(query)
+  res.send(user)
+})
+
+app.put('/users/:id', async (req, res) => {
+  const id = req.params.id;
+  const filter = { _id: ObjectId(id) };
+  const user = req.body;
+  const option = {upsert: true};
+  const updatedUser = {
+      $set: {
+          customer: user.name,
+          message: user.message,
+          email: user.email
+      }
+  }
+  const result = await userCollection.updateOne(filter, updatedUser, option);
+  console.log(result);
+  res.send(result);
+})
+
+
+// delete user
+
+app.delete('/users/:id', async (req, res) => {
+  const id = req.params.id;
+  const query = { _id: ObjectId(id) }
+  const result = await userCollection.deleteOne(query);
+  console.log(result);
+  res.send(result);
+
+});
+
+
+app.get('/service', async (req, res) => {
     const query = {}
     const cursor = serviceCollection.find(query).limit(3);
     const services = await cursor.toArray();
     res.send(services);
+})
 
-    app.get('/services/:id', async (req, res) => {
+
+  app.get('/services', async (req, res) => {
+    const query = {}
+    const cursor = serviceCollection.find(query);
+    const services = await cursor.toArray();
+    res.send(services);
+
+
+
+    app.get('/service/:id', async (req, res) => {
         const id = req.params.id;
         const query = { _id:ObjectId(id)};
         const service = await serviceCollection.findOne(query);
@@ -64,7 +134,6 @@ app.post('/jwt', (req, res) =>{
     app.get('/bookings', verifyJWT, async(req , res)=>{
       
       const decoded = req.decoded;
-      console.log('inside booking api', decoded);
       if(decoded.email !== req.query.email){
         res.status(403).send({message: 'unauthorized access'})
       }
@@ -113,17 +182,11 @@ app.post('/jwt', (req, res) =>{
 
     }
     finally{
-
     }
-
 }
 run()
 .catch(err => console.error(err));
 
-app.get('/', (req, res) => {
-  res.send('Hello World!!!')
-})
-
 app.listen(port, () => {
-  console.log(`Example app listening on port ${port}`)
+  console.log(`Travel Zone listening on port ${port}`)
 })
