@@ -1,5 +1,5 @@
 const express = require('express');
-const cors = require('cors');
+var cors = require('cors')
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 5000;
 
 // middle wares
-app.use(cors());
+app.use(cors())
 app.use(express.json());
 
 
@@ -52,18 +52,23 @@ app.post('/users' , async (req, res)=>{
   res.send(result)
 })
 
+
+
 //get user
 
 app.get('/users', async (req, res) => {
+  
   let query = {};
-  if(req.query.email){
-    query = {
-      email: req.query.email
+  if(req.query.reviewId) {
+    query= {
+      reviewId: req.query.reviewId
     }
   }
+
   const cursor = userCollection.find(query);
   const user = await cursor.toArray();
-  res.send(user)
+  const reverseUser = user.reverse();
+  res.send(reverseUser)
 })
 
 //update user
@@ -105,9 +110,17 @@ app.delete('/users/:id', async (req, res) => {
 });
 
 
+// add service post
+app.post('/services' , async (req, res)=>{
+  const AddService = req.body;
+  const result = await serviceCollection.insertOne(AddService);
+  res.send(result)
+})
+
+
 app.get('/service', async (req, res) => {
     const query = {}
-    const cursor = serviceCollection.find(query).limit(3);
+    const cursor = serviceCollection.find(query).sort({insertTime: -1}).limit(3);
     const services = await cursor.toArray();
     res.send(services);
 })
